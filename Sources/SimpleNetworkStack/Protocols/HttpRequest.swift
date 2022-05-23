@@ -65,6 +65,17 @@ public extension SpecializableDecoderHttpRequest {
         
         return cancellable
     }
+    
+    func start() -> AnyPublisher<ResponseType?, Error> {
+        
+        let cancellable = URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .map { $0.data }
+            .decodeIfPresent(type: ResponseType.self, decoder: decoder)
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+        
+        return cancellable
+    }
 }
 
 
