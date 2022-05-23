@@ -8,7 +8,7 @@
 import Foundation
 
 
-extension Encodable {
+public extension Encodable {
     
     func parametersDictionary() throws -> [String: String] {
         

@@ -8,4 +8,6 @@
 import Foundation
 
 
-public struct NoHeaders: NetworkHeader {}
+public struct NoHeaders: NetworkHeader {
+    public init() {}
+}

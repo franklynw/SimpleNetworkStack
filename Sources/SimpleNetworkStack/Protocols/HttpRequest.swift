@@ -8,21 +8,30 @@
 import Foundation
 import Combine
 
+@available(iOS 13, *)
+public protocol HttpRequest: SpecializableDecoderHttpRequest where Decoder == JSONDecoder {}
 
-public protocol HttpRequest {
+
+@available(iOS 13, *)
+public protocol SpecializableDecoderHttpRequest {
+    
     associatedtype QueryType: NetworkQuery
     associatedtype BodyType: NetworkRequestBody
     associatedtype ResponseType: NetworkResponse
     associatedtype AdditionalHeadersType: NetworkHeader
+    associatedtype Decoder: TopLevelDecoder where Decoder.Input == Data
+    
     var endPoint: NetworkEndPoint { get }
     var method: HttpMethod<QueryType, BodyType> { get }
     var contentType: ContentType? { get }
     var timeoutInterval: TimeInterval? { get }
+    var decoder: Decoder { get }
 }
 
 
 // MARK: - Default values
-public extension HttpRequest {
+@available(iOS 13, *)
+public extension SpecializableDecoderHttpRequest {
     
     var method: HttpMethod<QueryType, BodyType> {
         return .get()
@@ -35,17 +44,22 @@ public extension HttpRequest {
     var timeoutInterval: TimeInterval? {
         return nil
     }
+    
+    var decoder: Decoder {
+        return JSONDecoder() as! Decoder
+    }
 }
 
 
 // MARK: - Public
-public extension HttpRequest {
+@available(iOS 13, *)
+public extension SpecializableDecoderHttpRequest {
     
     func start() -> AnyPublisher<ResponseType, Error> {
         
         let cancellable = URLSession.shared.dataTaskPublisher(for: urlRequest)
             .map { $0.data }
-            .decode(type: ResponseType.self, decoder: JSONDecoder())
+            .decode(type: ResponseType.self, decoder: decoder)
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
         
@@ -55,7 +69,8 @@ public extension HttpRequest {
 
 
 // MARK: - Private
-extension HttpRequest {
+@available(iOS 13, *)
+extension SpecializableDecoderHttpRequest {
     
     private var urlRequest: URLRequest {
         
@@ -115,5 +130,25 @@ extension HttpRequest {
         defaultHeaders.forEach {
             request.setValue($0.value, forHTTPHeaderField: $0.key)
         }
+    }
+}
+
+
+public class DummyDecoder: TopLevelDecoder {
+    
+    /*
+     Doesn't actually decode anything, just sends the data as a string
+     */
+    
+    public typealias Input = Data
+    public typealias Output = String
+    
+    public init() {}
+    
+    public func decode<Output>(_ type: Output.Type, from: Input) throws -> Output where Output : Decodable {
+        guard let output = String(decoding: from, as: UTF8.self) as? Output else {
+            throw DecodingError.typeMismatch(String.self, .init(codingPath: [], debugDescription: "Could not output String", underlyingError: nil))
+        }
+        return output
     }
 }

@@ -13,4 +13,5 @@ public protocol NetworkResponse: Decodable {
 }
 
 
-public extension Array: NetworkResponse where Element: Decodable {}
+extension Array: NetworkResponse where Element: Decodable {}
+extension String: NetworkResponse {}
