@@ -5,11 +5,29 @@
 //  Created by Franklyn Weber on 23/05/2022.
 //
 
-import Foundation
+import UIKit
 import Combine
+
 
 @available(iOS 13, *)
 public protocol HttpRequest: SpecializableDecoderHttpRequest where Decoder == JSONDecoder {}
+
+@available(iOS 13, *)
+public protocol DownloadRequest: SpecializableDecoderHttpRequest where Decoder == DownloadDecoder, ResponseType == NoResponse {
+    associatedtype DownloadType: Downloadable
+}
+
+@available(iOS 13, *)
+public protocol Downloadable {
+    init?(data: Data)
+}
+
+
+enum RequestError: Error {
+    case sessionFailed(error: URLError)
+    case decodingFailed
+    case other(Error)
+}
 
 
 @available(iOS 13, *)
@@ -83,7 +101,7 @@ public extension SpecializableDecoderHttpRequest {
 @available(iOS 13, *)
 extension SpecializableDecoderHttpRequest {
     
-    private var urlRequest: URLRequest {
+    fileprivate var urlRequest: URLRequest {
         
         let url = endPoint.url
         let urlWithParameters = addQueryParameters(to: url)
@@ -145,6 +163,21 @@ extension SpecializableDecoderHttpRequest {
 }
 
 
+@available(iOS 13, *)
+public extension DownloadRequest {
+    
+    func start() -> AnyPublisher<DownloadType?, URLError> {
+        
+        let cancellable = URLSession.shared.dataTaskPublisher(for: urlRequest)
+            .map { DownloadType.init(data: $0.data) }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+        
+        return cancellable
+    }
+}
+
+
 public class DummyDecoder: TopLevelDecoder {
     
     /*
@@ -163,3 +196,23 @@ public class DummyDecoder: TopLevelDecoder {
         return output
     }
 }
+
+
+public class DownloadDecoder: TopLevelDecoder {
+    
+    /*
+     Doesn't actually decode anything, just passes along the data
+     */
+    
+    public typealias Input = Data
+    public typealias Output = Data
+    
+    public init() {}
+    
+    public func decode<Output>(_ type: Output.Type, from: Input) throws -> Output where Output : Decodable {
+        return from as! Output
+    }
+}
+
+
+extension UIImage: Downloadable {}
