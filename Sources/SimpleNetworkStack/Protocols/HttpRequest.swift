@@ -10,7 +10,25 @@ import Combine
 
 
 @available(iOS 13, *)
+public protocol SpecializableDecoderHttpRequest {
+    
+    associatedtype QueryType: NetworkQuery
+    associatedtype BodyType: NetworkRequestBody
+    associatedtype ResponseType: NetworkResponse
+    associatedtype AdditionalHeadersType: NetworkHeader
+    associatedtype Decoder: TopLevelDecoder where Decoder.Input == Data
+    
+    var endPoint: NetworkEndPoint { get }
+    var method: HttpMethod<QueryType, BodyType> { get }
+    var contentType: ContentType? { get }
+    var timeoutInterval: TimeInterval? { get }
+    var decoder: Decoder { get }
+}
+
+
+@available(iOS 13, *)
 public protocol HttpRequest: SpecializableDecoderHttpRequest where Decoder == JSONDecoder {}
+
 
 @available(iOS 13, *)
 public protocol DownloadRequest: SpecializableDecoderHttpRequest where Decoder == DownloadDecoder, ResponseType == NoResponse {
@@ -27,23 +45,6 @@ enum RequestError: Error {
     case sessionFailed(error: URLError)
     case decodingFailed
     case other(Error)
-}
-
-
-@available(iOS 13, *)
-public protocol SpecializableDecoderHttpRequest {
-    
-    associatedtype QueryType: NetworkQuery
-    associatedtype BodyType: NetworkRequestBody
-    associatedtype ResponseType: NetworkResponse
-    associatedtype AdditionalHeadersType: NetworkHeader
-    associatedtype Decoder: TopLevelDecoder where Decoder.Input == Data
-    
-    var endPoint: NetworkEndPoint { get }
-    var method: HttpMethod<QueryType, BodyType> { get }
-    var contentType: ContentType? { get }
-    var timeoutInterval: TimeInterval? { get }
-    var decoder: Decoder { get }
 }
 
 
